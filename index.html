@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AutoMarket</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- Додаємо Compressor.js для стиснення зображень -->
+    <script src="https://unpkg.com/compressorjs@1.2.1/dist/compressor.min.js"></script>
+    <!-- Ініціалізація Firebase -->
+    <script type="module">
+      import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
+      import { getDatabase } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
+      import { getAuth } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+      import { getAnalytics } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-analytics.js';
+
+      const firebaseConfig = {
+        apiKey: "AIzaSyCWCnWMAbN9lHvs0hWCR2KdMH41vV80Apg",
+        authDomain: "project-3-2691a.firebaseapp.com",
+        databaseURL: "https://project-3-2691a-default-rtdb.firebaseio.com/",
+        projectId: "project-3-2691a",
+        storageBucket: "project-3-2691a.firebasestorage.app",
+        messagingSenderId: "221491942249",
+        appId: "1:221491942249:web:36b65f856c5150096523f8",
+        measurementId: "G-HJX7DMKJH0"
+      };
+
+      const app = initializeApp(firebaseConfig);
+      const database = getDatabase(app);
+      const auth = getAuth(app);
+      const analytics = getAnalytics(app);
+
+      window.firebaseApp = app;
+      window.firebaseDatabase = database;
+      window.firebaseAuth = auth;
+      window.firebaseAnalytics = analytics;
+    </script>
+</head>
+<body>
+    <div class="container">
+        <h1>AutoMarket</h1>
+
+        <!-- Панель авторизації та сповіщень -->
+        <div class="auth-panel">
+            <span id="authStatus">Ви не авторизовані</span>
+            <button id="authButton" onclick="showLoginModal()">Увійти</button>
+            <button onclick="showRegisterModal()">Зареєструватися</button>
+            <span id="notifications" class="notification-bell" onclick="showNotifications()">🔔 <span id="notificationCount">0</span></span>
+        </div>
+
+        <!-- Вкладки -->
+        <div class="tabs">
+            <button class="tab-btn active" onclick="showTab('allCarsTab')">Всі авто</button>
+            <button class="tab-btn" onclick="showTab('favoritesTab')">Обрані авто</button>
+            <button class="tab-btn" onclick="showTab('messagesTab')">Повідомлення</button>
+            <button class="tab-btn" onclick="showTab('compareTab')">Порівняння</button>
+            <button class="tab-btn" onclick="showTab('profileTab')">Профіль</button>
+        </div>
+
+        <!-- Вкладка "Всі авто" -->
+        <div id="allCarsTab" class="tab-content active">
+            <div class="filters">
+                <input type="text" id="searchInput" placeholder="Пошук (наприклад, Audi)">
+                <select id="brandFilter">
+                    <option value="">Всі марки</option>
+                    <option value="Abarth">Abarth</option>
+                    <option value="Acura">Acura</option>
+                    <option value="Alfa Romeo">Alfa Romeo</option>
+                    <option value="Aston Martin">Aston Martin</option>
+                    <option value="Audi">Audi</option>
+                    <option value="Bentley">Bentley</option>
+                    <option value="BMW">BMW</option>
+                    <option value="Bugatti">Bugatti</option>
+                    <option value="Buick">Buick</option>
+                    <option value="Cadillac">Cadillac</option>
+                    <option value="Chevrolet">Chevrolet</option>
+                    <option value="Chrysler">Chrysler</option>
+                    <option value="Citroën">Citroën</option>
+                    <option value="Dacia">Dacia</option>
+                    <option value="Daewoo">Daewoo</option>
+                    <option value="Daihatsu">Daihatsu</option>
+                    <option value="Dodge">Dodge</option>
+                    <option value="Ferrari">Ferrari</option>
+                    <option value="Fiat">Fiat</option>
+                    <option value="Ford">Ford</option>
+                    <option value="Genesis">Genesis</option>
+                    <option value="GMC">GMC</option>
+                    <option value="Honda">Honda</option>
+                    <option value="Hummer">Hummer</option>
+                    <option value="Hyundai">Hyundai</option>
+                    <option value="Infiniti">Infiniti</option>
+                    <option value="Isuzu">Isuzu</option>
+                    <option value="Jaguar">Jaguar</option>
+                    <option value="Jeep">Jeep</option>
+                    <option value="Kia">Kia</option>
+                    <option value="Koenigsegg">Koenigsegg</option>
+                    <option value="Lamborghini">Lamborghini</option>
+                    <option value="Lancia">Lancia</option>
+                    <option value="Land Rover">Land Rover</option>
+                    <option value="Lexus">Lexus</option>
+                    <option value="Lincoln">Lincoln</option>
+                    <option value="Lotus">Lotus</option>
+                    <option value="Maserati">Maserati</option>
+                    <option value="Maybach">Maybach</option>
+                    <option value="Mazda">Mazda</option>
+                    <option value="McLaren">McLaren</option>
+                    <option value="Mercedes-Benz">Mercedes-Benz</option>
+                    <option value="Mini">Mini</option>
+                    <option value="Mitsubishi">Mitsubishi</option>
+                    <option value="Nissan">Nissan</option>
+                    <option value="Opel">Opel</option>
+                    <option value="Pagani">Pagani</option>
+                    <option value="Peugeot">Peugeot</option>
+                    <option value="Porsche">Porsche</option>
+                    <option value="Ram">Ram</option>
+                    <option value="Renault">Renault</option>
+                    <option value="Rolls-Royce">Rolls-Royce</option>
+                    <option value="Saab">Saab</option>
+                    <option value="Seat">Seat</option>
+                    <option value="Škoda">Škoda</option>
+                    <option value="Smart">Smart</option>
+                    <option value="SsangYong">SsangYong</option>
+                    <option value="Subaru">Subaru</option>
+                    <option value="Suzuki">Suzuki</option>
+                    <option value="Tesla">Tesla</option>
+                    <option value="Toyota">Toyota</option>
+                    <option value="Volkswagen">Volkswagen</option>
+                    <option value="Volvo">Volvo</option>
+                </select>
+                <select id="bodyTypeFilter">
+                    <option value="">Всі типи кузова</option>
+                    <option value="Седан">Седан</option>
+                    <option value="Кросовер">Кросовер</option>
+                    <option value="Хетчбек">Хетчбек</option>
+                    <option value="Мінівен">Мінівен</option>
+                    <option value="Кабріолет">Кабріолет</option>
+                    <option value="Пікап">Пікап</option>
+                    <option value="Ліфтбек">Ліфтбек</option>
+                    <option value="Мікровен">Мікровен</option>
+                    <option value="Купе">Купе</option>
+                    <option value="Універсал">Універсал</option>
+                </select>
+                <select id="conditionFilter">
+                    <option value="">Стан авто</option>
+                    <option value="новий">Новий</option>
+                    <option value="б/в">Б/в</option>
+                </select>
+                <input type="text" id="locationFilter" placeholder="Місто або село">
+                <input type="number" id="priceFilter" placeholder="Макс. ціна ($)">
+                <input type="number" id="mileageFilter" placeholder="Макс. пробіг (км)">
+                <input type="number" id="yearFromFilter" placeholder="Рік від" min="1900" max="2025">
+                <input type="number" id="yearToFilter" placeholder="Рік до" min="1900" max="2025">
+                <select id="sortFilter">
+                    <option value="">Сортування</option>
+                    <option value="price-asc">Ціна: від низької</option>
+                    <option value="price-desc">Ціна: від високої</option>
+                    <option value="year-asc">Рік: від старшого</option>
+                    <option value="year-desc">Рік: від нового</option>
+                </select>
+                <button onclick="filterCars(1)">Фільтрувати</button>
+            </div>
+
+            <!-- Кнопка для додавання нового авто -->
+            <button id="addCarBtn" onclick="showAddCarForm()" class="add-car-btn" disabled>Додати авто</button>
+
+            <!-- Список авто -->
+            <div id="carList" class="car-list"></div>
+
+            <!-- Пагінація -->
+            <div class="pagination" id="pagination"></div>
+        </div>
+
+        <!-- Вкладка для обраних авто -->
+        <div id="favoritesTab" class="tab-content">
+            <div id="favoritesList" class="car-list"></div>
+        </div>
+
+        <!-- Вкладка для повідомлень -->
+        <div id="messagesTab" class="tab-content">
+            <div id="messagesList">
+                <h3>Листування</h3>
+                <div id="conversations"></div>
+            </div>
+        </div>
+
+        <!-- Вкладка для порівняння -->
+        <div id="compareTab" class="tab-content">
+            <div id="compareList">
+                <table id="compareTable">
+                    <thead>
+                        <tr>
+                            <th>Характеристика</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>Марка та модель</td></tr>
+                        <tr><td>Тип кузова</td></tr>
+                        <tr><td>Рік</td></tr>
+                        <tr><td>Ціна</td></tr>
+                        <tr><td>Пробіг</td></tr>
+                        <tr><td>Місто</td></tr>
+                        <tr><td>Стан</td></tr>
+                        <tr><td>Дії</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Вкладка для профілю -->
+        <div id="profileTab" class="tab-content">
+            <div id="profileSection">
+                <h3>Ваш профіль</h3>
+                <p><strong>Ім'я користувача:</strong> <span id="profileUsername"></span></p>
+                <p><strong>Ім'я:</strong> <span id="profileName"></span> <input type="text" id="editName" placeholder="Ваше ім'я" style="display:none;"></p>
+                <p><strong>Телефон:</strong> <span id="profilePhone"></span> <input type="text" id="editPhone" placeholder="Ваш телефон" style="display:none;"></p>
+                <p><strong>Email:</strong> <span id="profileEmail"></span> <input type="email" id="editEmail" placeholder="Ваш email" style="display:none;"></p>
+                <button id="editProfileBtn" onclick="toggleEditProfile()">Редагувати профіль</button>
+                <button id="saveProfileBtn" onclick="saveProfile()" style="display:none;">Зберегти</button>
+            </div>
+        </div>
+
+        <!-- Модальне вікно сповіщень -->
+        <div id="notificationModal" class="modal">
+            <div class="modal-content">
+                <span class="close" onclick="closeNotifications()">×</span>
+                <h2>Сповіщення</h2>
+                <div id="notificationsList"></div>
+            </div>
+        </div>
+
+        <!-- Модальне вікно для деталей -->
+        <div id="modal" class="modal">
+            <div class="modal-content">
+                <span class="close" onclick="closeModal()">×</span>
+                <h2 id="modalTitle"></h2>
+                <div id="modalImages" class="modal-images"></div>
+                <p id="modalBodyType"></p>
+                <p id="modalYear"></p>
+                <p id="modalPrice"></p>
+                <p id="modalMileage"></p>
+                <p id="modalLocation"></p>
+                <p id="modalCondition"></p>
+                <p id="modalDescription"></p>
+                <p id="modalSeller"></p>
+                <p id="modalContact"></p>
+                <div id="ratingSection" class="rating-section">
+                    <p>Оцінка: <span id="modalRating">Немає оцінок</span></p>
+                    <div id="ratingStars">
+                        <span class="star" onclick="rateCar(1)">★</span>
+                        <span class="star" onclick="rateCar(2)">★</span>
+                        <span class="star" onclick="rateCar(3)">★</span>
+                        <span class="star" onclick="rateCar(4)">★</span>
+                        <span class="star" onclick="rateCar(5)">★</span>
+                    </div>
+                </div>
+                <button id="messageSellerBtn" onclick="showMessageModal()">Написати продавцеві</button>
+            </div>
+        </div>
+
+        <!-- Модальне вікно для повноекранного перегляду зображень -->
+        <div id="fullscreenImageModal" class="modal fullscreen-modal">
+            <div class="fullscreen-modal-content">
+                <span class="close" onclick="closeFullscreenImageModal()">×</span>
+                <img id="fullscreenImage" src="" alt="Fullscreen Image">
+                <button class="prev-image" onclick="changeFullscreenImage(-1)">❮</button>
+                <button class="next-image" onclick="changeFullscreenImage(1)">❯</button>
+            </div>
+        </div>
+
+        <!-- Модальне вікно для додавання авто -->
+        <div id="addCarModal" class="modal">
+            <div class="modal-content">
+                <span class="close" onclick="closeAddCarModal()">×</span>
+                <h2>Додати нове авто</h2>
+                <form id="addCarForm">
+                    <input type="text" id="newBrand" placeholder="Марка (наприклад, Toyota)" required>
+                    <input type="text" id="newModel" placeholder="Модель (наприклад, Camry)" required>
+                    <select id="newBodyType" required>
+                        <option value="" disabled selected>Оберіть тип кузова</option>
+                        <option value="Седан">Седан</option>
+                        <option value="Кросовер">Кросовер</option>
+                        <option value="Хетчбек">Хетчбек</option>
+                        <option value="Мінівен">Мінівен</option>
+                        <option value="Кабріолет">Кабріолет</option>
+                        <option value="Пікап">Пікап</option>
+                        <option value="Ліфтбек">Ліфтбек</option>
+                        <option value="Мікровен">Мікровен</option>
+                        <option value="Купе">Купе</option>
+                        <option value="Універсал">Універсал</option>
+                    </select>
+                    <select id="newCondition" required>
+                        <option value="" disabled selected>Оберіть стан авто</option>
+                        <option value="новий">Новий</option>
+                        <option value="б/в">Б/в</option>
+                    </select>
+                    <input type="text" id="newLocation" placeholder="Місто або село" required>
+                    <button type="button" id="useGeoLocation" onclick="getGeoLocation()">Використати мою геолокацію</button>
+                    <input type="number" id="newYear" placeholder="Рік випуску" required>
+                    <input type="number" id="newPrice" placeholder="Ціна ($)" required>
+                    <input type="number" id="newMileage" placeholder="Пробіг (км)" required>
+                    <textarea id="newDescription" placeholder="Опис авто" required></textarea>
+                    <input type="text" id="newContact" placeholder="Контакти продавця" required>
+                    <input type="file" id="newImages" accept="image/*" multiple>
+                    <button type="submit">Додати</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Модальне вікно для редагування авто -->
+        <div id="editCarModal" class="modal">
+            <div class="modal-content">
+                <span class="close" onclick="closeEditCarModal()">×</span>
+                <h2>Редагувати авто</h2>
+                <form id="editCarForm">
+                    <input type="hidden" id="editCarId">
+                    <input type="text" id="editBrand" placeholder="Марка" required>
+                    <input type="text" id="editModel" placeholder="Модель" required>
+                    <select id="editBodyType" required>
+                        <option value="" disabled>Оберіть тип кузова</option>
+                        <option value="Седан">Седан</option>
+                        <option value="Кросовер">Кросовер</option>
+                        <option value="Хетчбек">Хетчбек</option>
+                        <option value="Мінівен">Мінівен</option>
+                        <option value="Кабріолет">Кабріолет</option>
+                        <option value="Пікап">Пікап</option>
+                        <option value="Ліфтбек">Ліфтбек</option>
+                        <option value="Мікровен">Мікровен</option>
+                        <option value="Купе">Купе</option>
+                        <option value="Універсал">Універсал</option>
+                    </select>
+                    <select id="editCondition" required>
+                        <option value="" disabled>Оберіть стан авто</option>
+                        <option value="новий">Новий</option>
+                        <option value="б/в">Б/в</option>
+                    </select>
+                    <input type="text" id="editLocation" placeholder="Місто або село" required>
+                    <button type="button" id="editUseGeoLocation" onclick="getGeoLocation(true)">Використати мою геолокацію</button>
+                    <input type="number" id="editYear" placeholder="Рік випуску" required>
+                    <input type="number" id="editPrice" placeholder="Ціна ($)" required>
+                    <input type="number" id="editMileage" placeholder="Пробіг (км)" required>
+                    <textarea id="editDescription" placeholder="Опис авто" required></textarea>
+                    <input type="text" id="editContact" placeholder="Контакти продавця" required>
+                    <input type="file" id="editImages" accept="image/*" multiple>
+                    <button type="submit">Зберегти зміни</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Модальне вікно для входу -->
+        <div id="loginModal" class="modal">
+            <div class="modal-content">
+                <span class="close" onclick="closeLoginModal()">×</span>
+                <h2>Увійти</h2>
+                <form id="loginForm">
+                    <input type="text" id="username" placeholder="Ім'я користувача" required>
+                    <input type="password" id="password" placeholder="Пароль" required>
+                    <button type="submit">Увійти</button>
+                </form>
+                <button onclick="showResetPasswordModal()" class="link-btn">Забули пароль?</button>
+            </div>
+        </div>
+
+        <!-- Модальне вікно для реєстрації -->
+        <div id="registerModal" class="modal">
+            <div class="modal-content">
+                <span class="close" onclick="closeRegisterModal()">×</span>
+                <h2>Зареєструватися</h2>
+                <form id="registerForm">
+                    <input type="text" id="newUsername" placeholder="Ім'я користувача" required>
+                    <input type="text" id="newName" placeholder="Ваше ім'я" required>
+                    <input type="text" id="newPhone" placeholder="Ваш телефон" required>
+                    <input type="email" id="newEmail" placeholder="Ваш email" required>
+                    <input type="password" id="newPassword" placeholder="Пароль" required>
+                    <p id="passwordRequirements" style="color: #666; font-size: 12px;">
+                        Пароль повинен містити щонайменше 8 символів, 1 цифру та 1 велику літеру.
+                    </p>
+                    <button type="submit">Зареєструватися</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Модальне вікно для скидання пароля -->
+        <div id="resetPasswordModal" class="modal">
+            <div class="modal-content">
+                <span class="close" onclick="closeResetPasswordModal()">×</span>
+                <h2>Скинути пароль</h2>
+                <form id="resetPasswordForm">
+                    <input type="text" id="resetUsername" placeholder="Ім'я користувача" required>
+                    <input type="password" id="newResetPassword" placeholder="Новий пароль" required>
+                    <p id="resetPasswordRequirements" style="color: #666; font-size: 12px;">
+                        Пароль повинен містити щонайменше 8 символів, 1 цифру та 1 велику літеру.
+                    </p>
+                    <button type="submit">Скинути пароль</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Модальне вікно для надсилання повідомлення -->
+        <div id="messageModal" class="modal">
+            <div class="modal-content">
+                <span class="close" onclick="closeMessageModal()">×</span>
+                <h2>Надіслати повідомлення</h2>
+                <form id="messageForm">
+                    <input type="hidden" id="messageCarId">
+                    <input type="hidden" id="messageRecipient">
+                    <textarea id="messageText" placeholder="Ваше повідомлення" required></textarea>
+                    <button type="submit">Надіслати</button>
+                </form>
+                <div id="conversationHistory"></div>
+            </div>
+        </div>
+    </div>
+    <script type="module" src="script.js"></script>
+</body>
+</html>

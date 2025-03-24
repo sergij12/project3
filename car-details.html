@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Деталі авто - AutoMarket</title>
+  <link rel="stylesheet" href="styles.css">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+  <!-- Ініціалізація Firebase -->
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
+    import { getDatabase } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
+    import { getAuth } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+    import { getAnalytics } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-analytics.js';
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCWCnWMAbN9lHvs0hWCR2KdMH41vV80Apg",
+      authDomain: "project-3-2691a.firebaseapp.com",
+      databaseURL: "https://project-3-2691a-default-rtdb.firebaseio.com/",
+      projectId: "project-3-2691a",
+      storageBucket: "project-3-2691a.firebasestorage.app",
+      messagingSenderId: "221491942249",
+      appId: "1:221491942249:web:36b65f856c5150096523f8",
+      measurementId: "G-HJX7DMKJH0"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const database = getDatabase(app);
+    const auth = getAuth(app);
+    const analytics = getAnalytics(app);
+
+    window.firebaseApp = app;
+    window.firebaseDatabase = database;
+    window.firebaseAuth = auth;
+    window.firebaseAnalytics = analytics;
+  </script>
+</head>
+<body>
+  <div class="container">
+    <h1>Деталі авто</h1>
+    <button onclick="window.close()">Повернутися до списку</button>
+    <div id="carDetails">
+      <h2 id="carTitle"></h2>
+      <div id="carImages" class="car-images"></div>
+      <p id="carBodyType"></p>
+      <p id="carYear"></p>
+      <p id="carPrice"></p>
+      <p id="carMileage"></p>
+      <p id="carLocation"></p>
+      <p id="carCondition"></p>
+      <p id="carDescription"></p>
+      <p id="carSeller"></p>
+      <p id="carContact"></p>
+      <div id="ratingSection" class="rating-section">
+        <p>Оцінка: <span id="carRating">Немає оцінок</span></p>
+        <div id="ratingStars">
+          <span class="star" onclick="rateCar(1)">★</span>
+          <span class="star" onclick="rateCar(2)">★</span>
+          <span class="star" onclick="rateCar(3)">★</span>
+          <span class="star" onclick="rateCar(4)">★</span>
+          <span class="star" onclick="rateCar(5)">★</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Модальне вікно для повноекранного перегляду зображень -->
+  <div id="fullscreenImageModal" class="modal fullscreen-modal">
+    <div class="fullscreen-modal-content">
+      <span class="close" onclick="closeFullscreenImageModal()">×</span>
+      <img id="fullscreenImage" src="" alt="Fullscreen Image">
+      <button class="prev-image" onclick="changeFullscreenImage(-1)">❮</button>
+      <button class="next-image" onclick="changeFullscreenImage(1)">❯</button>
+    </div>
+  </div>
+
+  <div id="carDetails">
+    <h2 id="carTitle"></h2>
+    <div id="carImages" class="car-images"></div>
+    <p id="carBodyType"></p>
+    <p id="carYear"></p>
+    <p id="carPrice"></p>
+    <p id="carMileage"></p>
+    <p id="carLocation"></p>
+    <p id="carCondition"></p>
+    <p id="carDescription"></p>
+    <p id="carSeller"></p>
+    <p id="carContact"></p>
+    <div id="ratingSection" class="rating-section">
+      <p>Оцінка: <span id="carRating">Немає оцінок</span></p>
+      <div id="ratingStars">
+        <span class="star" onclick="rateCar(1)">★</span>
+        <span class="star" onclick="rateCar(2)">★</span>
+        <span class="star" onclick="rateCar(3)">★</span>
+        <span class="star" onclick="rateCar(4)">★</span>
+        <span class="star" onclick="rateCar(5)">★</span>
+      </div>
+    </div>
+    <button onclick="addToFavorites()">Додати до обранного</button>
+    <button onclick="addToCompare()">Додати до порівняння</button>
+    <button onclick="showMessageModal()">Написати продавцеві</button>
+  </div>
+
+  <script type="module" src="car-details.js"></script>
+</body>
+</html>

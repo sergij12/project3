@@ -38,8 +38,8 @@ const cache = {
 
 // Функція для завантаження зображень у Cloudinary
 async function uploadToCloudinary(file) {
-  const CLOUDINARY_URL = 'https://api.cloudinary.com/v1_1/<ваш-cloud-name>/image/upload'; // Замініть <ваш-cloud-name>
-  const UPLOAD_PRESET = '<ваш-upload-preset>'; // Замініть <ваш-upload-preset>
+  const CLOUDINARY_URL = 'https://api.cloudinary.com/v1_1/dhcfbg2j8/image/upload'; 
+  const UPLOAD_PRESET = 'unsigned_upload'; 
 
   const formData = new FormData();
   formData.append('file', file);
@@ -375,10 +375,10 @@ function isPasswordValid(password) {
 // Обробка входу
 document.getElementById('loginForm').addEventListener('submit', (e) => {
   e.preventDefault();
-  const username = document.getElementById('username').value;
+  const email = document.getElementById('email').value;
   const password = document.getElementById('password').value;
 
-  signInWithEmailAndPassword(auth, `${username}@example.com`, password)
+  signInWithEmailAndPassword(auth, email, password)
     .then(userCredential => {
       const user = userCredential.user;
       loadUserData(user.uid);
@@ -386,7 +386,11 @@ document.getElementById('loginForm').addEventListener('submit', (e) => {
     })
     .catch(error => {
       console.error('Помилка входу:', error);
-      alert('Неправильне ім’я користувача або пароль!');
+      if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+        alert('Неправильний email або пароль!');
+      } else {
+        alert('Помилка входу: ' + error.message);
+      }
     });
 });
 
@@ -431,8 +435,7 @@ document.getElementById('registerForm').addEventListener('submit', (e) => {
 // Обробка скидання пароля
 document.getElementById('resetPasswordForm').addEventListener('submit', (e) => {
   e.preventDefault();
-  const username = document.getElementById('resetUsername').value;
-  const email = `${username}@example.com`;
+  const email = document.getElementById('resetEmail').value;
 
   sendPasswordResetEmail(auth, email)
     .then(() => {
@@ -441,7 +444,11 @@ document.getElementById('resetPasswordForm').addEventListener('submit', (e) => {
     })
     .catch(error => {
       console.error('Помилка скидання пароля:', error);
-      alert('Помилка: ' + error.message);
+      if (error.code === 'auth/user-not-found') {
+        alert('Користувача з таким email не знайдено!');
+      } else {
+        alert('Помилка: ' + error.message);
+      }
     });
 });
 
@@ -961,34 +968,55 @@ function displayCompareList() {
 
 // Відображення повідомлень
 function displayMessages() {
-  const conversationsDiv = document.getElementById('conversations');
-  conversationsDiv.innerHTML = '';
+  const messagesList = document.getElementById('messagesList');
+  messagesList.innerHTML = '';
 
   if (!currentUser) {
-    conversationsDiv.innerHTML = '<p>Увійдіть, щоб переглянути повідомлення.</p>';
+    messagesList.innerHTML = '<p>Увійдіть, щоб переглянути повідомлення.</p>';
     return;
   }
 
-  const userMessages = messages.filter(msg => msg.sender === currentUser.username || msg.recipient === currentUser.username);
-  const conversations = {};
-
-  userMessages.forEach(msg => {
-    const otherUser = msg.sender === currentUser.username ? msg.recipient : msg.sender;
-    if (!conversations[otherUser]) {
-      conversations[otherUser] = [];
+  const messagesRef = ref(database, 'messages');
+  onValue(messagesRef, snapshot => {
+    const messages = snapshot.val();
+    if (!messages) {
+      messagesList.innerHTML = '<p>Немає повідомлень.</p>';
+      return;
     }
-    conversations[otherUser].push(msg);
-  });
 
-  for (const otherUser in conversations) {
-    const conversationDiv = document.createElement('div');
-    conversationDiv.classList.add('conversation');
-    conversationDiv.innerHTML = `
-      <h4>Листування з ${otherUser}</h4>
-      <button onclick="openConversation('${otherUser}')">Відкрити</button>
-    `;
-    conversationsDiv.appendChild(conversationDiv);
-  }
+    const userMessages = {};
+    for (const messageId in messages) {
+      const message = messages[messageId];
+      const senderLower = message.sender.toLowerCase();
+      const recipientLower = message.recipient.toLowerCase();
+      const currentUserLower = currentUser.username.toLowerCase();
+
+      if (senderLower === currentUserLower || recipientLower === currentUserLower) {
+        const otherUser = senderLower === currentUserLower ? message.recipient : message.sender;
+        const otherUserLower = otherUser.toLowerCase();
+        if (!userMessages[otherUserLower]) {
+          userMessages[otherUserLower] = { displayName: otherUser, messages: [] };
+        }
+        userMessages[otherUserLower].messages.push({ id: messageId, ...message });
+      }
+    }
+
+    if (Object.keys(userMessages).length === 0) {
+      messagesList.innerHTML = '<p>Немає повідомлень.</p>';
+      return;
+    }
+
+    for (const otherUserLower in userMessages) {
+      const { displayName } = userMessages[otherUserLower];
+      const div = document.createElement('div');
+      div.className = 'message-item';
+      div.innerHTML = `
+        <p>Листування з ${displayName}</p>
+        <button onclick="openChat('${displayName}')">Відкрити</button>
+      `;
+      messagesList.appendChild(div);
+    }
+  });
 }
 
 // Відображення історії листування

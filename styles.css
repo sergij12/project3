@@ -842,3 +842,13 @@ right: 10px;
 font-size: 20px;
 cursor: pointer;
 }
+
+.message-item.unread {
+  background-color: #e6f3ff; /* Світло-блакитний фон для непрочитаних */
+  border-left: 4px solid #3498db; /* Синя смужка зліва */
+  font-weight: 500;
+}
+
+.message-item.unread p {
+  color: #2c3e50; /* Темніший текст для кращої читабельності */
+}

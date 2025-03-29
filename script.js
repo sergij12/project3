@@ -284,7 +284,35 @@ function closeMessageModal() {
 
 function showNotifications() {
   document.getElementById('notificationModal').style.display = 'block';
-  displayNotifications();
+
+  // Позначимо всі сповіщення як прочитані
+  const unreadNotifications = notifications.filter(
+    n => n.recipient === currentUser.username && !n.read
+  );
+
+  const updates = {};
+  unreadNotifications.forEach(notification => {
+    updates[`notifications/${notification.id}/read`] = true;
+  });
+
+  if (Object.keys(updates).length > 0) {
+    update(ref(database), updates)
+      .then(() => {
+        // Оновлюємо локальний масив notifications
+        unreadNotifications.forEach(notification => {
+          const notificationIndex = notifications.findIndex(n => n.id === notification.id);
+          if (notificationIndex !== -1) {
+            notifications[notificationIndex].read = true;
+          }
+        });
+        updateNotificationCount(); // Оновлюємо лічильник
+        displayNotifications(); // Оновлюємо список сповіщень
+      })
+      .catch(error => {
+        console.error('Помилка позначення сповіщень як прочитаних:', error);
+        alert('Помилка: ' + error.message);
+      });
+  }
 }
 
 function closeNotifications() {
@@ -615,9 +643,10 @@ document.getElementById('messageForm').addEventListener('submit', (e) => {
   const message = {
     sender: currentUser.username,
     recipient: recipient,
-    carId: carId || null, // Додаємо carId, якщо він є, інакше null
+    carId: carId || null,
     text: messageText,
-    timestamp: new Date().toLocaleString('uk-UA')
+    timestamp: new Date().toLocaleString('uk-UA'),
+    read: false // Додаємо поле read
   };
 
   const messagesRef = ref(database, 'messages');
@@ -1012,14 +1041,32 @@ function displayMessages() {
   // Відображаємо лише унікальних користувачів
   const displayedUsers = new Set();
   for (const otherUserLower in userMessages) {
-    const { displayName } = userMessages[otherUserLower];
-    if (displayedUsers.has(otherUserLower)) continue; // Пропускаємо, якщо користувач уже відображений
+    const { displayName, messages: userConversation } = userMessages[otherUserLower];
+    if (displayedUsers.has(otherUserLower)) continue;
     displayedUsers.add(otherUserLower);
+
+    // Знаходимо останнє повідомлення, яке має carId (якщо є)
+    const messageWithCar = userConversation.find(msg => msg.carId);
+    let carInfo = '';
+    if (messageWithCar && messageWithCar.carId) {
+      const car = cars.find(c => c.id === messageWithCar.carId);
+      if (car) {
+        carInfo = ` щодо ${car.brand} ${car.model}`;
+      }
+    }
+
+    // Перевіряємо, чи є непрочитані повідомлення від цього користувача
+    const hasUnread = userConversation.some(
+      msg => msg.sender === displayName && msg.recipient === currentUser.username && !msg.read
+    );
 
     const div = document.createElement('div');
     div.className = 'message-item';
+    if (hasUnread) {
+      div.classList.add('unread');
+    }
     div.innerHTML = `
-      <p>Листування з ${displayName}</p>
+      <p>Листування з ${displayName}${carInfo}</p>
       <button onclick="openConversation('${displayName}')">Відкрити</button>
     `;
     messagesList.appendChild(div);
@@ -1059,6 +1106,34 @@ function openConversation(recipient) {
     return;
   }
 
+  // Позначимо всі повідомлення від цього відправника як прочитані
+  const messagesToUpdate = messages.filter(
+    msg => msg.sender === recipient && msg.recipient === currentUser.username && !msg.read
+  );
+
+  const updates = {};
+  messagesToUpdate.forEach(msg => {
+    updates[`messages/${msg.id}/read`] = true;
+  });
+
+  if (Object.keys(updates).length > 0) {
+    update(ref(database), updates)
+      .then(() => {
+        // Оновлюємо локальний масив messages
+        messagesToUpdate.forEach(msg => {
+          const messageIndex = messages.findIndex(m => m.id === msg.id);
+          if (messageIndex !== -1) {
+            messages[messageIndex].read = true;
+          }
+        });
+        displayMessages(); // Оновлюємо список чатів
+      })
+      .catch(error => {
+        console.error('Помилка позначення повідомлень як прочитаних:', error);
+        alert('Помилка: ' + error.message);
+      });
+  }
+
   // Встановлюємо recipient у форму
   document.getElementById('messageRecipient').value = recipient;
   // Очищаємо carId, якщо він не потрібен
@@ -1082,13 +1157,14 @@ function displayNotifications() {
   const userNotifications = notifications.filter(n => n.recipient === currentUser.username);
   userNotifications.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
-  userNotifications.forEach((notification, index) => {
+  if (userNotifications.length === 0) {
+    notificationsList.innerHTML = '<p>Немає сповіщень.</p>';
+    return;
+  }
+
+  userNotifications.forEach(notification => {
     const notificationDiv = document.createElement('div');
     notificationDiv.classList.add('notification');
-    if (!notification.read) {
-      notificationDiv.classList.add('unread');
-      notificationDiv.onclick = () => markNotificationAsRead(notification.id, index);
-    }
     notificationDiv.innerHTML = `
       <p>${notification.message}</p>
       <p><small>${notification.timestamp}</small></p>

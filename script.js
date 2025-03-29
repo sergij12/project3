@@ -363,10 +363,6 @@ function closeEditCarModal() {
   document.getElementById('editCarForm').reset();
 }
 
-function closeModal() {
-  document.getElementById('modal').style.display = 'none';
-}
-
 let currentImageIndex = 0;
 let currentImages = [];
 
@@ -740,7 +736,7 @@ function displayCars() {
       <p>Пробіг: ${car.mileage} км</p>
       <p>Місто: ${car.location}</p>
       <p>Оцінка: ${averageRating}</p>
-      <button onclick="showCarDetails('${car.id}')">Деталі</button>
+      <a href="car-details.html?id=${car.id}"><button>Деталі</button></a>
       <button onclick="toggleFavorite('${car.id}')">${isFavorite ? '★ Видалити з обраного' : '☆ Додати до обраного'}</button>
       <button onclick="toggleCompare('${car.id}')">${isInCompare ? 'Видалити з порівняння' : 'Додати до порівняння'}</button>
       ${currentUser && car.seller === currentUser.username ? `
@@ -765,77 +761,6 @@ function displayPagination() {
     if (i === currentPage) button.classList.add('active');
     button.onclick = () => filterCars(i);
     pagination.appendChild(button);
-  }
-}
-
-// Відображення деталей авто
-function showCarDetails(carId) {
-  const car = cars.find(c => c.id === carId);
-  if (car) {
-    logEvent(analytics, 'view_car', {
-      car_id: carId,
-      car_brand: car.brand,
-      car_model: car.model,
-      user_id: currentUser ? currentUser.uid : 'anonymous'
-    });
-    currentCarId = carId;
-    document.getElementById('modalTitle').innerText = `${car.brand} ${car.model}`;
-    const modalImages = document.getElementById('modalImages');
-    modalImages.innerHTML = '';
-    car.images.forEach(img => {
-      const imgElement = document.createElement('img');
-      imgElement.src = img;
-      imgElement.onclick = () => showFullscreenImage(img, car.images);
-      modalImages.appendChild(imgElement);
-    });
-    document.getElementById('modalBodyType').innerText = `Тип кузова: ${car.bodyType}`;
-    document.getElementById('modalYear').innerText = `Рік: ${car.year}`;
-    document.getElementById('modalPrice').innerText = `Ціна: $${car.price}`;
-    document.getElementById('modalMileage').innerText = `Пробіг: ${car.mileage} км`;
-    document.getElementById('modalLocation').innerText = `Місто: ${car.location}`;
-    document.getElementById('modalCondition').innerText = `Стан: ${car.condition}`;
-    document.getElementById('modalDescription').innerText = `Опис: ${car.description}`;
-    document.getElementById('modalSeller').innerText = `Продавець: ${car.seller}`;
-    document.getElementById('modalContact').innerText = `Контакти: ${car.contact}`;
-    const averageRating = car.ratingCount > 0 ? (car.rating / car.ratingCount).toFixed(1) : 'Немає';
-    document.getElementById('modalRating').innerText = averageRating;
-    const stars = document.getElementById('ratingStars').getElementsByTagName('span');
-    for (let i = 0; i < stars.length; i++) {
-      stars[i].classList.remove('active');
-    }
-    const rating = Math.round(averageRating);
-    for (let i = 0; i < rating; i++) {
-      stars[i].classList.add('active');
-    }
-    document.getElementById('messageCarId').value = carId;
-    document.getElementById('messageRecipient').value = car.seller;
-    document.getElementById('modal').style.display = 'block';
-  }
-}
-
-// Оцінка авто
-function rateCar(rating) {
-  if (!isAuthenticated) {
-    alert('Увійдіть, щоб оцінити авто!');
-    showLoginModal();
-    return;
-  }
-  const car = cars.find(c => c.id === currentCarId);
-  if (car) {
-    const newRating = (car.rating || 0) + rating;
-    const newRatingCount = (car.ratingCount || 0) + 1;
-    update(ref(database, `cars/${currentCarId}`), {
-      rating: newRating,
-      ratingCount: newRatingCount
-    })
-      .then(() => {
-        alert('Дякуємо за вашу оцінку!');
-        showCarDetails(currentCarId);
-      })
-      .catch(error => {
-        console.error('Помилка оцінки авто:', error);
-        alert('Помилка: ' + error.message);
-      });
   }
 }
 
@@ -948,7 +873,7 @@ function displayFavorites() {
       <p>Пробіг: ${car.mileage} км</p>
       <p>Місто: ${car.location}</p>
       <p>Оцінка: ${averageRating}</p>
-      <button onclick="showCarDetails('${car.id}')">Деталі</button>
+      <a href="car-details.html?id=${car.id}"><button>Деталі</button></a>
       <button onclick="toggleFavorite('${car.id}')">★ Видалити з обраного</button>
     `;
     favoritesList.appendChild(carElement);
@@ -1314,13 +1239,10 @@ window.showAddCarForm = showAddCarForm;
 window.closeAddCarModal = closeAddCarModal;
 window.showEditCarModal = showEditCarModal;
 window.closeEditCarModal = closeEditCarModal;
-window.closeModal = closeModal;
 window.showFullscreenImage = showFullscreenImage;
 window.closeFullscreenImageModal = closeFullscreenImageModal;
 window.changeFullscreenImage = changeFullscreenImage;
 window.filterCars = filterCars;
-window.showCarDetails = showCarDetails;
-window.rateCar = rateCar;
 window.toggleFavorite = toggleFavorite;
 window.toggleCompare = toggleCompare;
 window.deleteCar = deleteCar;

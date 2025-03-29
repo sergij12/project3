@@ -852,3 +852,28 @@ cursor: pointer;
 .message-item.unread p {
   color: #2c3e50; /* Темніший текст для кращої читабельності */
 }
+
+#conversationHistory {
+  max-height: 300px;
+  overflow-y: auto;
+  margin-top: 20px;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  background-color: #f9f9f9;
+}
+
+.message {
+  margin: 5px 0;
+  padding: 5px 10px;
+  border-radius: 5px;
+}
+
+.message.sent {
+  background-color: #e9ecef;
+  text-align: right;
+}
+
+.message.received {
+  background-color: #f8f9fa;
+}

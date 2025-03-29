@@ -38,7 +38,7 @@
 <body>
   <div class="container">
     <h1>Деталі авто</h1>
-    <button onclick="window.close()">Повернутися до списку</button>
+    <button onclick="window.location.href='index.html'">Повернутися до списку</button>
     <div id="carDetails">
       <h2 id="carTitle"></h2>
       <div id="carImages" class="car-images"></div>
@@ -61,6 +61,9 @@
           <span class="star" onclick="rateCar(5)">★</span>
         </div>
       </div>
+      <button onclick="addToFavorites()">Додати до обраного</button>
+      <button onclick="addToCompare()">Додати до порівняння</button>
+      <button onclick="showMessageModal()">Написати продавцеві</button>
     </div>
   </div>
 
@@ -74,31 +77,19 @@
     </div>
   </div>
 
-  <div id="carDetails">
-    <h2 id="carTitle"></h2>
-    <div id="carImages" class="car-images"></div>
-    <p id="carBodyType"></p>
-    <p id="carYear"></p>
-    <p id="carPrice"></p>
-    <p id="carMileage"></p>
-    <p id="carLocation"></p>
-    <p id="carCondition"></p>
-    <p id="carDescription"></p>
-    <p id="carSeller"></p>
-    <p id="carContact"></p>
-    <div id="ratingSection" class="rating-section">
-      <p>Оцінка: <span id="carRating">Немає оцінок</span></p>
-      <div id="ratingStars">
-        <span class="star" onclick="rateCar(1)">★</span>
-        <span class="star" onclick="rateCar(2)">★</span>
-        <span class="star" onclick="rateCar(3)">★</span>
-        <span class="star" onclick="rateCar(4)">★</span>
-        <span class="star" onclick="rateCar(5)">★</span>
-      </div>
+  <!-- Модальне вікно для надсилання повідомлення -->
+  <div id="messageModal" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeMessageModal()">×</span>
+      <h2>Надіслати повідомлення</h2>
+      <form id="messageForm">
+        <input type="hidden" id="messageCarId">
+        <input type="hidden" id="messageRecipient">
+        <textarea id="messageText" placeholder="Ваше повідомлення" required></textarea>
+        <button type="submit">Надіслати</button>
+      </form>
+      <div id="conversationHistory"></div>
     </div>
-    <button onclick="addToFavorites()">Додати до обранного</button>
-    <button onclick="addToCompare()">Додати до порівняння</button>
-    <button onclick="showMessageModal()">Написати продавцеві</button>
   </div>
 
   <script type="module" src="car-details.js"></script>

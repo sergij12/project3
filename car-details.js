@@ -11,6 +11,7 @@ let carId = null;
 let car = null;
 let currentImageIndex = 0;
 let currentImages = [];
+let messages = []; // Додаємо масив для повідомлень
 
 window.onload = () => {
   auth.onAuthStateChanged(user => {
@@ -23,9 +24,11 @@ window.onload = () => {
           currentUser = { ...currentUser, ...userData };
         }
         loadCarDetails();
+        loadMessages(); // Завантажуємо повідомлення
       }, { onlyOnce: true });
     } else {
       loadCarDetails();
+      loadMessages(); // Завантажуємо повідомлення
     }
   });
 };
@@ -53,6 +56,19 @@ function loadCarDetails() {
     } else {
       document.getElementById('carDetails').innerHTML = '<p>Авто не знайдено.</p>';
     }
+  }, { onlyOnce: true });
+}
+
+// Завантаження повідомлень
+function loadMessages() {
+  const messagesRef = ref(database, 'messages');
+  onValue(messagesRef, snapshot => {
+    messages = [];
+    snapshot.forEach(childSnapshot => {
+      const message = childSnapshot.val();
+      message.id = childSnapshot.key;
+      messages.push(message);
+    });
   }, { onlyOnce: true });
 }
 
@@ -142,11 +158,39 @@ function showMessageModal() {
     alert('Ви не можете надіслати повідомлення самому собі!');
     return;
   }
+  displayConversationHistory(car.seller); // Відображаємо історію листування
   document.getElementById('messageModal').style.display = 'block';
 }
 
 function closeMessageModal() {
   document.getElementById('messageModal').style.display = 'none';
+  document.getElementById('conversationHistory').innerHTML = '';
+}
+
+// Відображення історії листування
+function displayConversationHistory(recipient) {
+  const historyDiv = document.getElementById('conversationHistory');
+  historyDiv.innerHTML = '';
+
+  const conversation = messages.filter(msg =>
+    (msg.sender === currentUser.username && msg.recipient === recipient) ||
+    (msg.sender === recipient && msg.recipient === currentUser.username)
+  );
+
+  conversation.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
+  conversation.forEach(msg => {
+    const msgDiv = document.createElement('div');
+    msgDiv.classList.add('message');
+    msgDiv.classList.add(msg.sender === currentUser.username ? 'sent' : 'received');
+    msgDiv.innerHTML = `
+      <p><strong>${msg.sender}:</strong> ${msg.text}</p>
+      <p><small>${msg.timestamp}</small></p>
+    `;
+    historyDiv.appendChild(msgDiv);
+  });
+
+  historyDiv.scrollTop = historyDiv.scrollHeight;
 }
 
 document.getElementById('messageForm').addEventListener('submit', (e) => {
@@ -160,15 +204,28 @@ document.getElementById('messageForm').addEventListener('submit', (e) => {
     recipient: recipient,
     carId: carId,
     text: messageText,
-    timestamp: Date.now()
+    timestamp: new Date().toLocaleString('uk-UA'), // Змінено формат часу
+    read: false
   };
 
   // Зберігаємо повідомлення у Firebase
   const messagesRef = ref(database, 'messages');
   push(messagesRef, message)
     .then(() => {
+      // Додаємо сповіщення для одержувача
+      let notificationMessage = `Нове повідомлення від ${currentUser.username}`;
+      if (carId) {
+        notificationMessage += ` щодо ${car.brand} ${car.model}`;
+      }
+      const notification = {
+        recipient: recipient,
+        message: notificationMessage,
+        timestamp: new Date().toLocaleString('uk-UA'),
+        read: false
+      };
+      push(ref(database, 'notifications'), notification);
       alert('Повідомлення надіслано!');
-      closeMessageModal();
+      displayConversationHistory(recipient); // Оновлюємо історію листування
       document.getElementById('messageText').value = '';
     })
     .catch(error => {
@@ -176,13 +233,6 @@ document.getElementById('messageForm').addEventListener('submit', (e) => {
       alert('Помилка: ' + error.message);
     });
 });
-
-window.rateCar = rateCar;
-window.showFullscreenImage = showFullscreenImage;
-window.closeFullscreenImageModal = closeFullscreenImageModal;
-window.changeFullscreenImage = changeFullscreenImage;
-window.showMessageModal = showMessageModal;
-window.closeMessageModal = closeMessageModal;
 
 function addToFavorites() {
   if (!currentUser) {
@@ -240,5 +290,11 @@ function addToCompare() {
   }, { onlyOnce: true });
 }
 
+window.rateCar = rateCar;
+window.showFullscreenImage = showFullscreenImage;
+window.closeFullscreenImageModal = closeFullscreenImageModal;
+window.changeFullscreenImage = changeFullscreenImage;
+window.showMessageModal = showMessageModal;
+window.closeMessageModal = closeMessageModal;
 window.addToFavorites = addToFavorites;
 window.addToCompare = addToCompare;

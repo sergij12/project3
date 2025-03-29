@@ -169,7 +169,7 @@ function loadMessages() {
       messages.push(message);
     });
     displayMessages();
-  }, { onlyOnce: true });
+  });
 }
 
 // Завантаження сповіщень
@@ -203,7 +203,6 @@ function updateAuthStatus() {
     addCarBtn.disabled = true;
   }
   displayFavorites();
-  displayMessages();
   displayCompareList();
   displayNotifications();
 }
@@ -607,37 +606,45 @@ document.getElementById('messageForm').addEventListener('submit', (e) => {
   const carId = document.getElementById('messageCarId').value;
   const recipient = document.getElementById('messageRecipient').value;
   const messageText = document.getElementById('messageText').value;
-  const car = cars.find(c => c.id === carId);
 
-  if (car && currentUser.username !== recipient) {
-    const message = {
-      sender: currentUser.username,
-      recipient: recipient,
-      carId: carId,
-      text: messageText,
-      timestamp: new Date().toLocaleString('uk-UA')
-    };
-    const messagesRef = ref(database, 'messages');
-    push(messagesRef, message)
-      .then(() => {
-        const notification = {
-          recipient: recipient,
-          message: `Нове повідомлення від ${currentUser.username} щодо ${car.brand} ${car.model}`,
-          timestamp: new Date().toLocaleString('uk-UA'),
-          read: false
-        };
-        push(ref(database, 'notifications'), notification);
-        alert('Повідомлення надіслано!');
-        displayConversationHistory(recipient);
-        document.getElementById('messageText').value = '';
-      })
-      .catch(error => {
-        console.error('Помилка надсилання повідомлення:', error);
-        alert('Помилка: ' + error.message);
-      });
-  } else {
+  if (currentUser.username === recipient) {
     alert('Ви не можете надіслати повідомлення самому собі!');
+    return;
   }
+
+  const message = {
+    sender: currentUser.username,
+    recipient: recipient,
+    carId: carId || null, // Додаємо carId, якщо він є, інакше null
+    text: messageText,
+    timestamp: new Date().toLocaleString('uk-UA')
+  };
+
+  const messagesRef = ref(database, 'messages');
+  push(messagesRef, message)
+    .then(() => {
+      let notificationMessage = `Нове повідомлення від ${currentUser.username}`;
+      if (carId) {
+        const car = cars.find(c => c.id === carId);
+        if (car) {
+          notificationMessage += ` щодо ${car.brand} ${car.model}`;
+        }
+      }
+      const notification = {
+        recipient: recipient,
+        message: notificationMessage,
+        timestamp: new Date().toLocaleString('uk-UA'),
+        read: false
+      };
+      push(ref(database, 'notifications'), notification);
+      alert('Повідомлення надіслано!');
+      displayConversationHistory(recipient);
+      document.getElementById('messageText').value = '';
+    })
+    .catch(error => {
+      console.error('Помилка надсилання повідомлення:', error);
+      alert('Помилка: ' + error.message);
+    });
 });
 
 // Фільтрація авто
@@ -976,47 +983,47 @@ function displayMessages() {
     return;
   }
 
-  const messagesRef = ref(database, 'messages');
-  onValue(messagesRef, snapshot => {
-    const messages = snapshot.val();
-    if (!messages) {
-      messagesList.innerHTML = '<p>Немає повідомлень.</p>';
-      return;
-    }
+  if (!messages || messages.length === 0) {
+    messagesList.innerHTML = '<p>Немає повідомлень.</p>';
+    return;
+  }
 
-    const userMessages = {};
-    for (const messageId in messages) {
-      const message = messages[messageId];
-      const senderLower = message.sender.toLowerCase();
-      const recipientLower = message.recipient.toLowerCase();
-      const currentUserLower = currentUser.username.toLowerCase();
+  const userMessages = {};
+  for (const message of messages) {
+    const senderLower = message.sender.toLowerCase();
+    const recipientLower = message.recipient.toLowerCase();
+    const currentUserLower = currentUser.username.toLowerCase();
 
-      if (senderLower === currentUserLower || recipientLower === currentUserLower) {
-        const otherUser = senderLower === currentUserLower ? message.recipient : message.sender;
-        const otherUserLower = otherUser.toLowerCase();
-        if (!userMessages[otherUserLower]) {
-          userMessages[otherUserLower] = { displayName: otherUser, messages: [] };
-        }
-        userMessages[otherUserLower].messages.push({ id: messageId, ...message });
+    if (senderLower === currentUserLower || recipientLower === currentUserLower) {
+      const otherUser = senderLower === currentUserLower ? message.recipient : message.sender;
+      const otherUserLower = otherUser.toLowerCase();
+      if (!userMessages[otherUserLower]) {
+        userMessages[otherUserLower] = { displayName: otherUser, messages: [] };
       }
+      userMessages[otherUserLower].messages.push(message);
     }
+  }
 
-    if (Object.keys(userMessages).length === 0) {
-      messagesList.innerHTML = '<p>Немає повідомлень.</p>';
-      return;
-    }
+  if (Object.keys(userMessages).length === 0) {
+    messagesList.innerHTML = '<p>Немає повідомлень.</p>';
+    return;
+  }
 
-    for (const otherUserLower in userMessages) {
-      const { displayName } = userMessages[otherUserLower];
-      const div = document.createElement('div');
-      div.className = 'message-item';
-      div.innerHTML = `
-        <p>Листування з ${displayName}</p>
-        <button onclick="openChat('${displayName}')">Відкрити</button>
-      `;
-      messagesList.appendChild(div);
-    }
-  });
+  // Відображаємо лише унікальних користувачів
+  const displayedUsers = new Set();
+  for (const otherUserLower in userMessages) {
+    const { displayName } = userMessages[otherUserLower];
+    if (displayedUsers.has(otherUserLower)) continue; // Пропускаємо, якщо користувач уже відображений
+    displayedUsers.add(otherUserLower);
+
+    const div = document.createElement('div');
+    div.className = 'message-item';
+    div.innerHTML = `
+      <p>Листування з ${displayName}</p>
+      <button onclick="openConversation('${displayName}')">Відкрити</button>
+    `;
+    messagesList.appendChild(div);
+  }
 }
 
 // Відображення історії листування
@@ -1047,14 +1054,19 @@ function displayConversationHistory(recipient) {
 
 // Відкриття листування
 function openConversation(recipient) {
-  const car = cars.find(c => c.seller === recipient);
-  if (car) {
-    currentCarId = car.id;
-    document.getElementById('messageCarId').value = car.id;
-    document.getElementById('messageRecipient').value = recipient;
-    displayConversationHistory(recipient);
-    document.getElementById('messageModal').style.display = 'block';
+  if (!currentUser) {
+    alert('Увійдіть, щоб переглянути чат.');
+    return;
   }
+
+  // Встановлюємо recipient у форму
+  document.getElementById('messageRecipient').value = recipient;
+  // Очищаємо carId, якщо він не потрібен
+  document.getElementById('messageCarId').value = '';
+  // Відображаємо історію листування
+  displayConversationHistory(recipient);
+  // Відкриваємо модальне вікно
+  document.getElementById('messageModal').style.display = 'block';
 }
 
 // Відображення сповіщень

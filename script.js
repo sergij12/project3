@@ -298,15 +298,14 @@ function showNotifications() {
   if (Object.keys(updates).length > 0) {
     update(ref(database), updates)
       .then(() => {
-        // Оновлюємо локальний масив notifications
         unreadNotifications.forEach(notification => {
           const notificationIndex = notifications.findIndex(n => n.id === notification.id);
           if (notificationIndex !== -1) {
             notifications[notificationIndex].read = true;
           }
         });
-        updateNotificationCount(); // Оновлюємо лічильник
-        displayNotifications(); // Оновлюємо список сповіщень
+        updateNotificationCount();
+        displayNotifications();
       })
       .catch(error => {
         console.error('Помилка позначення сповіщень як прочитаних:', error);
@@ -642,7 +641,7 @@ document.getElementById('messageForm').addEventListener('submit', (e) => {
     carId: carId || null,
     text: messageText,
     timestamp: new Date().toLocaleString('uk-UA'),
-    read: false // Додаємо поле read
+    read: false
   };
 
   const messagesRef = ref(database, 'messages');
@@ -774,6 +773,7 @@ function toggleFavorite(carId) {
 
   const userFavorites = favorites[currentUser.uid] || [];
   const index = userFavorites.indexOf(carId);
+
   if (index === -1) {
     userFavorites.push(carId);
     const car = cars.find(c => c.id === carId);
@@ -789,7 +789,8 @@ function toggleFavorite(carId) {
       timestamp: new Date().toLocaleString('uk-UA'),
       read: false
     };
-    push(ref(database, 'notifications'), notification);
+    push(ref(database, 'notifications'), notification)
+      .catch(error => console.error('Помилка додавання сповіщення:', error));
   } else {
     userFavorites.splice(index, 1);
     logEvent(analytics, 'remove_from_favorites', {
@@ -798,7 +799,20 @@ function toggleFavorite(carId) {
     });
   }
 
-  set(ref(database, `favorites/${currentUser.uid}`), userFavorites);
+  console.log('Оновлений список обраного:', userFavorites); // Логування для дебагу
+
+  set(ref(database, `favorites/${currentUser.uid}`), userFavorites)
+    .then(() => {
+      favorites[currentUser.uid] = userFavorites; // Оновлюємо локальні дані
+      cache.favorites = userFavorites; // Оновлюємо кеш
+      cache.lastUpdated = Date.now(); // Оновлюємо час кешу
+      displayCars(); // Оновлюємо список автомобілів
+      displayFavorites(); // Оновлюємо список обраного
+    })
+    .catch(error => {
+      console.error('Помилка оновлення обраного:', error);
+      alert('Помилка: ' + error.message);
+    });
 }
 
 // Додавання до порівняння
@@ -811,6 +825,7 @@ function toggleCompare(carId) {
 
   const userCompareList = compareList[currentUser.uid] || [];
   const index = userCompareList.indexOf(carId);
+
   if (index === -1) {
     if (userCompareList.length >= 4) {
       alert('Ви можете порівнювати не більше 4 авто одночасно!');
@@ -821,7 +836,20 @@ function toggleCompare(carId) {
     userCompareList.splice(index, 1);
   }
 
-  set(ref(database, `compareList/${currentUser.uid}`), userCompareList);
+  console.log('Оновлений список порівняння:', userCompareList); // Логування для дебагу
+
+  set(ref(database, `compareList/${currentUser.uid}`), userCompareList)
+    .then(() => {
+      compareList[currentUser.uid] = userCompareList; // Оновлюємо локальні дані
+      cache.compareList = userCompareList; // Оновлюємо кеш
+      cache.lastUpdated = Date.now(); // Оновлюємо час кешу
+      displayCars(); // Оновлюємо список автомобілів
+      displayCompareList(); // Оновлюємо список порівняння
+    })
+    .catch(error => {
+      console.error('Помилка оновлення порівняння:', error);
+      alert('Помилка: ' + error.message);
+    });
 }
 
 // Видалення авто
@@ -963,14 +991,12 @@ function displayMessages() {
     return;
   }
 
-  // Відображаємо лише унікальних користувачів
   const displayedUsers = new Set();
   for (const otherUserLower in userMessages) {
     const { displayName, messages: userConversation } = userMessages[otherUserLower];
     if (displayedUsers.has(otherUserLower)) continue;
     displayedUsers.add(otherUserLower);
 
-    // Знаходимо останнє повідомлення, яке має carId (якщо є)
     const messageWithCar = userConversation.find(msg => msg.carId);
     let carInfo = '';
     if (messageWithCar && messageWithCar.carId) {
@@ -980,7 +1006,6 @@ function displayMessages() {
       }
     }
 
-    // Перевіряємо, чи є непрочитані повідомлення від цього користувача
     const hasUnread = userConversation.some(
       msg => msg.sender === displayName && msg.recipient === currentUser.username && !msg.read
     );
@@ -1031,7 +1056,6 @@ function openConversation(recipient) {
     return;
   }
 
-  // Позначимо всі повідомлення від цього відправника як прочитані
   const messagesToUpdate = messages.filter(
     msg => msg.sender === recipient && msg.recipient === currentUser.username && !msg.read
   );
@@ -1044,14 +1068,13 @@ function openConversation(recipient) {
   if (Object.keys(updates).length > 0) {
     update(ref(database), updates)
       .then(() => {
-        // Оновлюємо локальний масив messages
         messagesToUpdate.forEach(msg => {
           const messageIndex = messages.findIndex(m => m.id === msg.id);
           if (messageIndex !== -1) {
             messages[messageIndex].read = true;
           }
         });
-        displayMessages(); // Оновлюємо список чатів
+        displayMessages();
       })
       .catch(error => {
         console.error('Помилка позначення повідомлень як прочитаних:', error);
@@ -1059,13 +1082,9 @@ function openConversation(recipient) {
       });
   }
 
-  // Встановлюємо recipient у форму
   document.getElementById('messageRecipient').value = recipient;
-  // Очищаємо carId, якщо він не потрібен
   document.getElementById('messageCarId').value = '';
-  // Відображаємо історію листування
   displayConversationHistory(recipient);
-  // Відкриваємо модальне вікно
   document.getElementById('messageModal').style.display = 'block';
 }
 

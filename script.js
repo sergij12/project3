@@ -38,8 +38,8 @@ const cache = {
 
 // Функція для завантаження зображень у Cloudinary
 async function uploadToCloudinary(file) {
-  const CLOUDINARY_URL = 'https://api.cloudinary.com/v1_1/dhcfbg2j8/image/upload'; 
-  const UPLOAD_PRESET = 'unsigned_upload'; 
+  const CLOUDINARY_URL = 'https://api.cloudinary.com/v1_1/dhcfbg2j8/image/upload';
+  const UPLOAD_PRESET = 'unsigned_upload';
 
   const formData = new FormData();
   formData.append('file', file);
@@ -97,11 +97,12 @@ function loadUserData(uid) {
   });
 }
 
-// Завантаження авто
+// Завантаження авто (оновлено для реального часу)
 function loadCars() {
   const now = Date.now();
   if (cache.cars && cache.lastUpdated && (now - cache.lastUpdated) < 60000) {
     cars = cache.cars;
+    console.log('Завантажено з кешу:', cars); // Дебаг
     filterCars(currentPage);
     return;
   }
@@ -114,10 +115,11 @@ function loadCars() {
       car.id = childSnapshot.key;
       cars.push(car);
     });
+    console.log('Завантажено авто з Firebase:', cars); // Дебаг
     cache.cars = cars;
     cache.lastUpdated = now;
     filterCars(currentPage);
-  }, { onlyOnce: true });
+  });
 }
 
 // Завантаження обраних
@@ -136,7 +138,7 @@ function loadFavorites() {
     cache.favorites = favorites[currentUser.uid];
     cache.lastUpdated = now;
     displayFavorites();
-  }, { onlyOnce: true });
+  });
 }
 
 // Завантаження списку порівняння
@@ -155,7 +157,7 @@ function loadCompareList() {
     cache.compareList = compareList[currentUser.uid];
     cache.lastUpdated = now;
     displayCompareList();
-  }, { onlyOnce: true });
+  });
 }
 
 // Завантаження повідомлень
@@ -184,7 +186,7 @@ function loadNotifications() {
     });
     updateNotificationCount();
     displayNotifications();
-  }, { onlyOnce: true });
+  });
 }
 
 // Оновлення статусу авторизації
@@ -474,7 +476,7 @@ document.getElementById('resetPasswordForm').addEventListener('submit', (e) => {
     });
 });
 
-// Обробка додавання авто
+// Обробка додавання авто (оновлено з скиданням фільтрів)
 document.getElementById('addCarForm').addEventListener('submit', (e) => {
   e.preventDefault();
 
@@ -488,10 +490,9 @@ document.getElementById('addCarForm').addEventListener('submit', (e) => {
   const mileage = parseInt(document.getElementById('newMileage').value);
   const description = document.getElementById('newDescription').value;
   const contact = document.getElementById('newContact').value;
-  const imagesInput = document.getElementById('newImages');
+  const imageFiles = Array.from(document.getElementById('newImages').files);
 
-  const imageFiles = Array.from(imagesInput.files);
-  const compressPromises = imageFiles.map(file => {
+  Promise.all(imageFiles.map(file => {
     return new Promise((resolve, reject) => {
       new Compressor(file, {
         quality: 0.6,
@@ -505,9 +506,7 @@ document.getElementById('addCarForm').addEventListener('submit', (e) => {
         }
       });
     });
-  });
-
-  Promise.all(compressPromises)
+  }))
     .then(compressedFiles => {
       const imagePromises = compressedFiles.map(file => uploadToCloudinary(file));
       return Promise.all(imagePromises);
@@ -529,20 +528,35 @@ document.getElementById('addCarForm').addEventListener('submit', (e) => {
         rating: 0,
         ratingCount: 0
       };
-
-      push(ref(database, 'cars'), newCar)
-        .then(() => {
-          alert('Авто успішно додано!');
-          closeAddCarModal();
-        })
-        .catch(error => {
-          console.error('Помилка додавання авто:', error);
-          alert('Помилка: ' + error.message);
-        });
+      console.log('Нове авто для додавання:', newCar);
+      return push(ref(database, 'cars'), newCar);
+    })
+    .then((snapshot) => {
+      const newCarId = snapshot.key;
+      console.log('Авто додано з ID:', newCarId);
+      alert('Авто успішно додано!');
+      closeAddCarModal();
+      document.getElementById('searchInput').value = '';
+      document.getElementById('brandFilter').value = '';
+      document.getElementById('bodyTypeFilter').value = '';
+      document.getElementById('conditionFilter').value = '';
+      document.getElementById('locationFilter').value = '';
+      document.getElementById('priceFilter').value = '';
+      document.getElementById('mileageFilter').value = '';
+      document.getElementById('yearFromFilter').value = '';
+      document.getElementById('yearToFilter').value = '';
+      document.getElementById('sortFilter').value = '';
+      cache.cars = null;
+      cache.lastUpdated = null;
+      loadCars();
+      setTimeout(() => {
+        filterCars(1);
+        showTab('allCarsTab'); // Переконайтеся, що вкладка "Всі авто" активна
+      }, 1000); // Збільшена затримка для гарантії оновлення
     })
     .catch(error => {
-      console.error('Помилка обробки зображень:', error);
-      alert('Помилка обробки зображень: ' + error.message);
+      console.error('Помилка додавання авто:', error);
+      alert('Помилка: ' + error.message);
     });
 });
 
@@ -708,6 +722,7 @@ function filterCars(page) {
     });
   }
 
+  console.log('Відфільтровані авто:', filteredCars); // Дебаг
   displayCars();
   displayPagination();
 }
@@ -720,6 +735,8 @@ function displayCars() {
   const start = (currentPage - 1) * carsPerPage;
   const end = start + carsPerPage;
   const paginatedCars = filteredCars.slice(start, end);
+
+  console.log('Авто для відображення:', paginatedCars); // Дебаг
 
   paginatedCars.forEach(car => {
     const carElement = document.createElement('div');
@@ -799,15 +816,13 @@ function toggleFavorite(carId) {
     });
   }
 
-  console.log('Оновлений список обраного:', userFavorites); // Логування для дебагу
-
   set(ref(database, `favorites/${currentUser.uid}`), userFavorites)
     .then(() => {
-      favorites[currentUser.uid] = userFavorites; // Оновлюємо локальні дані
-      cache.favorites = userFavorites; // Оновлюємо кеш
-      cache.lastUpdated = Date.now(); // Оновлюємо час кешу
-      displayCars(); // Оновлюємо список автомобілів
-      displayFavorites(); // Оновлюємо список обраного
+      favorites[currentUser.uid] = userFavorites;
+      cache.favorites = userFavorites;
+      cache.lastUpdated = Date.now();
+      displayCars();
+      displayFavorites();
     })
     .catch(error => {
       console.error('Помилка оновлення обраного:', error);
@@ -836,15 +851,13 @@ function toggleCompare(carId) {
     userCompareList.splice(index, 1);
   }
 
-  console.log('Оновлений список порівняння:', userCompareList); // Логування для дебагу
-
   set(ref(database, `compareList/${currentUser.uid}`), userCompareList)
     .then(() => {
-      compareList[currentUser.uid] = userCompareList; // Оновлюємо локальні дані
-      cache.compareList = userCompareList; // Оновлюємо кеш
-      cache.lastUpdated = Date.now(); // Оновлюємо час кешу
-      displayCars(); // Оновлюємо список автомобілів
-      displayCompareList(); // Оновлюємо список порівняння
+      compareList[currentUser.uid] = userCompareList;
+      cache.compareList = userCompareList;
+      cache.lastUpdated = Date.now();
+      displayCars();
+      displayCompareList();
     })
     .catch(error => {
       console.error('Помилка оновлення порівняння:', error);
@@ -866,6 +879,8 @@ function deleteCar(carId) {
       remove(ref(database, `cars/${carId}`))
         .then(() => {
           alert('Авто успішно видалено!');
+          cache.cars = null; // Очищаємо кеш після видалення
+          cache.lastUpdated = null;
           loadCars();
         })
         .catch(error => {
